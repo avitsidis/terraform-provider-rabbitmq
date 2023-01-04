@@ -132,18 +132,39 @@ func ReadBinding(d *schema.ResourceData, meta interface{}) error {
 	propertiesKey := bindingId[4]
 	log.Printf("[DEBUG] RabbitMQ: Attempting to find binding for: vhost=%s source=%s destination=%s destinationType=%s propertiesKey=%s",
 		vhost, source, destination, destinationType, propertiesKey)
+	fmt.Printf("[DEBUG] RabbitMQ: Attempting to find binding for: vhost=%s source=%s destination=%s destinationType=%s propertiesKey=%s",
+		vhost, source, destination, destinationType, propertiesKey)
 
-	bindings, err := rmqc.ListBindingsIn(vhost)
-	if err != nil {
-		return err
+	var bindings []rabbithole.BindingInfo
+	var err error
+	if destinationType == "queue" {
+		bindings, err = rmqc.ListQueueBindingsBetween(vhost, source, destination)
+		if err != nil {
+			fmt.Println("in error")
+			return err
+		}
+	} else if destinationType == "exchange" {
+		bindings, err = rmqc.ListExchangeBindingsBetween(vhost, source, destination)
+		if err != nil {
+			fmt.Println("in error")
+			return err
+		}
+	} else {
+		bindings, err = rmqc.ListBindingsIn(vhost)
+		if err != nil {
+			return err
+		}
 	}
 
-	log.Printf("[DEBUG] RabbitMQ: Bindings retrieved: %#v", bindings)
+	log.Printf("[DEBUG] RabbitMQ: ListExchangeBindingsBetween retrieved: %#v", bindings)
+	fmt.Printf("[DEBUG] RabbitMQ: Bindings retrieved: %#v", bindings)
 	bindingFound := false
 	for _, binding := range bindings {
 		log.Printf("[TRACE] RabbitMQ: Assessing binding: %#v", binding)
+		fmt.Printf("[TRACE] RabbitMQ: Assessing binding: %#v", binding)
 		if binding.Source == source && binding.Destination == destination && binding.DestinationType == destinationType && binding.PropertiesKey == propertiesKey {
 			log.Printf("[DEBUG] RabbitMQ: Found Binding: %#v", binding)
+			fmt.Printf("[DEBUG] RabbitMQ: Found Binding: %#v", binding)
 			bindingFound = true
 
 			d.Set("vhost", binding.Vhost)
